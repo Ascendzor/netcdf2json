@@ -165,7 +165,7 @@ class Process():
         self.nt = len(ds.dimensions[self.config.tdim])
 
         self.x = ds.variables[self.config.xname][:]
-        self.y = ds.variables[self.config.xname][:]
+        self.y = ds.variables[self.config.yname][:]
 
         # Sort out the dimensions.
         if self.config.clip:
