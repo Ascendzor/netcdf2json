@@ -299,6 +299,7 @@ class WriteJSON():
             for var in self.data.iterkeys():
                 s = json.dumps(self.data[var])
                 f.write(s)
+                if count < len(self.data.keys()) - 1: f.write(',')
             f.write(']')
 
 
