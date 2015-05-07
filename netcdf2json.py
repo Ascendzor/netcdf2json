@@ -40,6 +40,8 @@ class Config():
         Dictionary of the index and dimension name to extract from the
         netCDF variable. Can be multiple dimensions (e.g. {'time_counter':(0,
         100), 'depthu':0}).
+    nanvalue : float, optional
+        Specify a value to replace with null values when exporting to JSON.
 
     Author
     ------
@@ -47,7 +49,7 @@ class Config():
 
     """
 
-    def __init__(self, file=None, uname=None, vname=None, xname=None, yname=None, tname=None, basedate=None, calendar=None, xdim=None, ydim=None, tdim=None, clip=None):
+    def __init__(self, file=None, uname=None, vname=None, xname=None, yname=None, tname=None, basedate=None, calendar=None, xdim=None, ydim=None, tdim=None, clip=None, nanvalue=None):
         self.__dict = {}
         self.__set(file, 'file', str)
         self.__set(uname, 'uname', str)
@@ -61,6 +63,7 @@ class Config():
         self.__set(ydim, 'ydim', str)
         self.__set(tdim, 'tdim', str)
         self.__set(clip, 'clip', dict)
+        self.__set(nanvalue, 'nanvalue', float)
 
     def __set(self, value, target_name, value_type):
         if value:
@@ -105,6 +108,9 @@ class Config():
     def __clip(self):
         return self.__dict['clip']
 
+    def __nanvalue(self):
+        return self.__dict['nanvalue']
+
     file = property(__file)
     uname = property(__uname)
     vname = property(__vname)
@@ -117,6 +123,7 @@ class Config():
     ydim = property(__ydim)
     tdim = property(__tdim)
     clip = property(__clip)
+    nanvalue = property(__nanvalue)
 
     # Set some sensible defaults. These are based on my concatenated netCDFs of
     # Lee's global model run (so NEMO, I guess).
@@ -133,6 +140,7 @@ class Config():
     __default['ydim'] = 'y'
     __default['tdim'] = 'time_counter'
     __default['clip'] = {'depth':(0, 1)}
+    __default['nanvalue'] = 9.969209968386869e+36
 
 
 class Process():
