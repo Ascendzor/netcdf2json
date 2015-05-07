@@ -276,6 +276,14 @@ class WriteJSON():
         self.data['v']['header'] = self.header['template']
         self.data['v']['header']['parameterNumber'] = 3
         self.data['v']['header']['parameterNumberName'] = 'V_component_of_current'
+        date = datetime.strptime(str(u.Times[0]), '%Y-%m-%d %H:%M:%S')
+        self.data['u']['header']['refTime'] = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:06.3f}Z'.format(
+                date.year, date.month, date.day, date.hour, date.minute, date.second
+                )
+        date = datetime.strptime(str(v.Times[0]), '%Y-%m-%d %H:%M:%S')
+        self.data['v']['header']['refTime'] = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:06.3f}Z'.format(
+                date.year, date.month, date.day, date.hour, date.minute, date.second
+                )
 
         # Add the flattened data.
         self.data['u']['data'] = u.data.flatten().tolist()
