@@ -277,11 +277,12 @@ class WriteJSON():
         self.data['v']['header'] = self.header['template'].copy()
         self.data['v']['header']['parameterNumber'] = 3
         self.data['v']['header']['parameterNumberName'] = 'V_component_of_current'
-        date = datetime.strptime(str(u.Times[0]), '%Y-%m-%d %H:%M:%S')
+        # Can't use datetime.strftime because the model starts before 1900.
+        date = datetime.strptime(str(u.Times[uconf.clip[uconf.tname][-1]]), '%Y-%m-%d %H:%M:%S')
         self.data['u']['header']['refTime'] = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:06.3f}Z'.format(
                 date.year, date.month, date.day, date.hour, date.minute, date.second
                 )
-        date = datetime.strptime(str(v.Times[0]), '%Y-%m-%d %H:%M:%S')
+        date = datetime.strptime(str(v.Times[vconf.clip[vconf.tname][-1]]), '%Y-%m-%d %H:%M:%S')
         self.data['v']['header']['refTime'] = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:06.3f}Z'.format(
                 date.year, date.month, date.day, date.hour, date.minute, date.second
                 )
