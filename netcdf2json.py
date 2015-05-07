@@ -15,6 +15,7 @@ import numpy as np
 
 from netCDF4 import Dataset, num2date
 from datetime import datetime
+from scipy.interpolate import griddata
 
 
 class Config():
@@ -314,6 +315,38 @@ if __name__ == '__main__':
             clip={'depthv':(0, 1), 'time_counter':(-2, -1)})
     u = Process(files['u'], uconfig.uname, config=uconfig)
     v = Process(files['v'], vconfig.vname, config=vconfig)
+
+    # Reinterpolate the model outputs onto a third of a degree grid to match
+    # the existing data.
+    r = 1 / 3.0
+    lon, lat = np.arange(0, 360, r), np.arange(-80, 80 + r, r)
+    LON, LAT = np.meshgrid(lon, lat)
+    X, Y, U, V = u.x.flatten(), u.y.flatten(), u.data.flatten(), v.data.flatten()
+    X[X < 0] = X[X < 0] + 360
+    u.data = griddata((X, Y), U, (LON.flatten(), LAT.flatten()))
+    u.data = np.reshape(u.data, (len(lat), len(lon)))
+    v.data = griddata((X, Y), V, (LON.flatten(), LAT.flatten()))
+    v.data = np.reshape(v.data, (len(lat), len(lon)))
+    u.data[np.isnan(u.data)] = uconfig.nanvalue
+    v.data[np.isnan(v.data)] = vconfig.nanvalue
+    # Fix unrealistic values from the interpolation to the nanvalue.
+    u.data[u.data > 100] = uconfig.nanvalue
+    v.data[v.data > 100] = vconfig.nanvalue
+    u.data[u.data < -100] = uconfig.nanvalue
+    v.data[v.data < -100] = vconfig.nanvalue
+    # Shift the data to be 20-380 instead of 0-360. God knows why the code
+    # needs this to work.
+    xi = np.argmin(np.abs(lon - 20))
+    u.data = np.hstack((u.data[:, xi:], u.data[:, :xi]))
+    v.data = np.hstack((v.data[:, xi:], v.data[:, :xi]))
+    LON = np.vstack((LON[xi:, :], LON[:xi, :]))
+    LAT = np.vstack((LAT[xi:, :], LAT[:xi, :]))
+    # Update the metadata. Add the crazy offset needed for the data.
+    u.x, u.y = LON + 20, LAT
+    v.x, v.y = LON + 20, LAT
+    u.dx, u.dy, v.dx, v.dy = 4 * [r]
+    u.nx, u.ny, v.nx, v.ny = len(lon), len(lat), len(lon), len(lat)
+    del(lon, lat, LON, LAT, X, Y, U, V, r)
 
     W = WriteJSON(u, v, uconf=uconfig, vconf=vconfig)
 
