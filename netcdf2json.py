@@ -6,6 +6,7 @@ time step for compatibility with the earth package:
 
 """
 
+import os
 import sys
 import json
 import time
@@ -216,6 +217,8 @@ class WriteJSON():
     """
 
     def __init__(self, u, v, uconf=None, vconf=None):
+        self.data = {}
+
         if uconf:
             self.uconf = uconf
         else:
@@ -226,11 +229,8 @@ class WriteJSON():
         else:
             self.vconf = Config()
 
-        self.write_json(u, v, uconf, vconf)
-
-    def write_json(self, u, v, uconf, vconf):
-        meta = {}
-        meta['template'] = {
+        self.header = {}
+        self.header['template'] = {
                 'discipline':10,
                 'disciplineName':'Oceanographic_products',
                 'center':-4,
@@ -248,35 +248,48 @@ class WriteJSON():
                 'surface1Value':15,
                 'numberPoints':u.nx * u.ny,
                 'shape':0,
-                'shapeName':'Earth spherical with radius = 6\n367,\n470 m',
+                'shapeName':'Earth spherical with radius = 6,\n367,\n470 m',
                 'scanMode':0,
                 'nx':u.nx,
                 'ny':u.ny,
-                'lo1':u.x.min(),
-                'la1':u.y.max(),
-                'lo2':u.x.max(),
-                'la2':u.y.min(),
-                'dx':np.mean(np.median(np.diff(u.x[0, :]))),
-                'dy':np.mean(np.median(np.diff(u.y[0, :])))
+                'lo1':u.x.min().astype(float),
+                'la1':u.y.max().astype(float),
+                'lo2':u.x.max().astype(float),
+                'la2':u.y.min().astype(float),
+                'dx':np.mean(np.median(np.diff(u.x[0, :]))).astype(float),
+                'dy':np.mean(np.median(np.diff(u.y[0, :]))).astype(float)
                 }
 
-        meta['u'], meta['v'] = {}, {}
+        self.write_json(u, v, uconf, vconf)
+
+    def write_json(self, u, v, uconf, vconf, fstem=None):
+
+        if not fstem:
+            fstem = '{}-{}'.format(
+                    os.path.split(os.path.splitext(uconf.file)[0])[-1],
+                    os.path.split(os.path.splitext(vconf.file)[0])[-1]
+                    )
+
+        self.data['u'], self.data['v'] = {}, {}
         # Template is based on u data.
-        meta['u']['header'] = meta['template']
-        meta['v']['header'] = meta['template']
-        meta['v']['header']['parameterNumber'] = 3
-        meta['v']['header']['parameterNumberName'] = 'V_component_of_current'
+        self.data['u']['header'] = self.header['template']
+        self.data['v']['header'] = self.header['template']
+        self.data['v']['header']['parameterNumber'] = 3
+        self.data['v']['header']['parameterNumberName'] = 'V_component_of_current'
 
         # Add the flattened data.
-        meta['u']['data'] = u.data.flatten()
-        meta['v']['data'] = v.data.flatten()
+        self.data['u']['data'] = u.data.flatten().tolist()
+        self.data['v']['data'] = v.data.flatten().tolist()
 
-        # TODO:
-        # Replace invalid values (9.96920997e+36) with Nones so they're
-        # exported as nulls in the JSON file.
+        self.data['u']['data'] = [None if i == uconf.nanvalue else i for i in self.data['u']['data']]
+        self.data['v']['data'] = [None if i == vconf.nanvalue else i for i in self.data['v']['data']]
 
-        return meta
-
+        with open('{}.json'.format(fstem), 'w') as f:
+            f.write('[')
+            for var in self.data.iterkeys():
+                s = json.dumps(self.data[var])
+                f.write(s)
+            f.write(']')
 
 
 if __name__ == '__main__':
