@@ -273,8 +273,8 @@ class WriteJSON():
 
         self.data['u'], self.data['v'] = {}, {}
         # Template is based on u data.
-        self.data['u']['header'] = self.header['template']
-        self.data['v']['header'] = self.header['template']
+        self.data['u']['header'] = self.header['template'].copy()
+        self.data['v']['header'] = self.header['template'].copy()
         self.data['v']['header']['parameterNumber'] = 3
         self.data['v']['header']['parameterNumberName'] = 'V_component_of_current'
         date = datetime.strptime(str(u.Times[0]), '%Y-%m-%d %H:%M:%S')
