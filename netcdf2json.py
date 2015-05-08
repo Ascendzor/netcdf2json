@@ -335,10 +335,11 @@ class WriteJSON():
             self.vconf = Config()
 
         self.header = {}
+        # The y data is complicated because NEMO has twin poles.
         self.header['template'] = {
                 'discipline':10,
                 'disciplineName':'Oceanographic_products',
-                'center':-4,
+                'center':-3,
                 'centerName':'Plymouth Marine Laboratory',
                 'significanceOfRT':0,
                 'significanceOfRTName':'Analysis',
@@ -353,7 +354,7 @@ class WriteJSON():
                 'surface1Value':15,
                 'numberPoints':u.nx * u.ny,
                 'shape':0,
-                'shapeName':'Earth spherical with radius = 6,\n367,\n470 m',
+                'shapeName':'Earth spherical with radius = 6,367,470 m',
                 'scanMode':0,
                 'nx':u.nx,
                 'ny':u.ny,
@@ -361,8 +362,8 @@ class WriteJSON():
                 'la1':u.y.max().astype(float),
                 'lo2':u.x.max().astype(float),
                 'la2':u.y.min().astype(float),
-                'dx':np.mean(np.median(np.diff(u.x[0, :]))).astype(float),
-                'dy':np.mean(np.median(np.diff(u.y[0, :]))).astype(float)
+                'dx':u.dx,
+                'dy':u.dy
                 }
 
         if v:
