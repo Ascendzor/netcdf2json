@@ -18,6 +18,106 @@ from datetime import datetime
 from scipy.interpolate import griddata
 
 
+def main(f):
+    """
+    Function to run the main logic. This is mapped with the multiprocessing
+    tools to run in parallel.
+
+    """
+
+    def interpolate(var, r, config, extranan=np.inf):
+        """
+        Interpolate the data in u.data and v.data onto a grid from 0 to 360 and
+        -80 to 80.
+
+        Parameters
+        ----------
+        var : Process
+            Process class objects with the relevant data to interpolate.
+        r : float
+            Grid resolution for the interpolation.
+        config : Config
+            Config class with the various configuration parameters for the data
+            in var.
+        extranan : float
+            An extra check for nonsense data. Set to np.inf by default (i.e.
+            ignored).
+
+        Returns
+        -------
+        vari : Process
+            Updated class with the interpolated data.
+
+        """
+
+        # Move longitudes to 0-360 instead of -180 to 180.
+        var.x[var.x < 0] = var.x[var.x < 0] + 360
+        lon, lat = np.arange(0, 360, r), np.arange(-80, 80 + r, r)
+        LON, LAT = np.meshgrid(lon, lat)
+        X, Y, VAR = var.x.flatten(), var.y.flatten(), var.data.flatten()
+        var.data = griddata((X, Y), VAR, (LON.flatten(), LAT.flatten()))
+        var.data = np.reshape(var.data, (len(lat), len(lon)))
+        var.data[np.isnan(var.data)] = config.nanvalue
+        # Fix unrealistic values from the interpolation to the nanvalue.
+        var.data[var.data > extranan] = config.nanvalue
+        var.data[var.data < -extranan] = config.nanvalue
+        # Update the metadata
+        var.x, var.y = LON, LAT
+        var.dx, var.dy = r, r
+        var.nx, var.ny = len(lon), len(lat)
+        del(lon, lat, LON, LAT, X, Y, VAR, r)
+
+        return var
+
+
+    print('File {} of {}'.format(f + 1, len(files['u'])))
+
+    uconfig = Config(file=files['u'][f],
+            calendar='noleap',
+            clip={'depthu':(0, 1), 'time_counter':(0, 1)})
+    vconfig = Config(file=files['v'][f],
+            calendar='noleap',
+            clip={'depthv':(0, 1), 'time_counter':(0, 1)})
+    pconfig = Config(file=files['chl1'][f],
+            uname='Chl1',
+            calendar='noleap',
+            clip={'deptht':(0, 1), 'time_counter':(0, 1)})
+    try:
+        u = Process(files['u'][f], uconfig.uname, config=uconfig)
+    except:
+        print('Warning: interpolation for {} failed.'.format(files['u'][f]))
+        return
+    try:
+        v = Process(files['v'][f], vconfig.vname, config=vconfig)
+    except:
+        print('Warning: interpolation for {} failed.'.format(files['v'][f]))
+        return
+    try:
+        p = Process(files['chl1'][f], pconfig.uname, config=pconfig)
+    except:
+        print('Warning: interpolation for {} failed.'.format(files['chl1'][f]))
+        return
+
+    r = 1 # native resolution, but on a sensible grid.
+    u = interpolate(u, r, uconfig, extranan=100)
+    v = interpolate(v, r, uconfig, extranan=100)
+    p = interpolate(p, r, uconfig, extranan=100)
+
+    uvstem = os.path.join(out, 'nemo', '{}-{}_{:04d}'.format(
+            os.path.split(os.path.splitext(uconfig.file)[0])[-1],
+            os.path.split(os.path.splitext(vconfig.file)[0])[-1],
+            f + 1
+            ))
+    pstem = os.path.join(out, 'ersem', '{}-{:04d}'.format(
+            os.path.split(os.path.splitext(pconfig.file)[0])[-1],
+            f + 1
+            ))
+
+    # Write out the JSON of the UV data and the chlorophyll data.
+    W = WriteJSON(u, v, uconf=uconfig, vconf=vconfig, fstem=uvstem)
+    W = WriteJSON(p, uconf=pconfig, fstem=pstem)
+
+
 class Config():
     """
     Class for storing netCDF configuration options.
