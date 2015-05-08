@@ -312,14 +312,14 @@ class WriteJSON():
 
     u, v : Process
         Process classes of data to export. Each time step will be exported to
-        a new file.
+        a new file. If v is None, only write u.
     uconf, vconf : Config
         Config classes containing the relevant information. If omitted, assumes
         default options (see `Config.__doc__' for more information).
 
     """
 
-    def __init__(self, u, v, uconf=None, vconf=None):
+    def __init__(self, u, v=None, uconf=None, vconf=None, fstem=None):
         self.data = {}
 
         if uconf:
@@ -363,40 +363,39 @@ class WriteJSON():
                 'dy':np.mean(np.median(np.diff(u.y[0, :]))).astype(float)
                 }
 
-        self.write_json(u, v, uconf, vconf)
+        if v:
+            self.write_json(u, uconf, v=v, vconf=vconf)
+        else:
+            self.write_json(u, uconf)
 
-    def write_json(self, u, v, uconf, vconf, fstem=None):
 
-        if not fstem:
-            fstem = '{}-{}'.format(
-                    os.path.split(os.path.splitext(uconf.file)[0])[-1],
-                    os.path.split(os.path.splitext(vconf.file)[0])[-1]
-                    )
+    def write_json(self, u, uconf, v=None, vconf=None, fstem=None):
 
         self.data['u'], self.data['v'] = {}, {}
         # Template is based on u data.
         self.data['u']['header'] = self.header['template'].copy()
-        self.data['v']['header'] = self.header['template'].copy()
-        self.data['v']['header']['parameterNumber'] = 3
-        self.data['v']['header']['parameterNumberName'] = 'V_component_of_current'
         # Can't use datetime.strftime because the model starts before 1900.
         date = datetime.strptime(str(u.Times[uconf.clip[uconf.tname][-1]]), '%Y-%m-%d %H:%M:%S')
         self.data['u']['header']['refTime'] = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:06.3f}Z'.format(
                 date.year, date.month, date.day, date.hour, date.minute, date.second
                 )
-        date = datetime.strptime(str(v.Times[vconf.clip[vconf.tname][-1]]), '%Y-%m-%d %H:%M:%S')
-        self.data['v']['header']['refTime'] = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:06.3f}Z'.format(
-                date.year, date.month, date.day, date.hour, date.minute, date.second
-                )
-
         # Add the flattened data.
         self.data['u']['data'] = u.data.flatten().tolist()
-        self.data['v']['data'] = v.data.flatten().tolist()
-
         self.data['u']['data'] = [None if i == uconf.nanvalue else i for i in self.data['u']['data']]
-        self.data['v']['data'] = [None if i == vconf.nanvalue else i for i in self.data['v']['data']]
 
-        with open('{}.json'.format(fstem), 'w') as f:
+        # Do the same for v if we have it.
+        if v:
+            self.data['v']['header'] = self.header['template'].copy()
+            self.data['v']['header']['parameterNumber'] = 3
+            self.data['v']['header']['parameterNumberName'] = 'V_component_of_current'
+            date = datetime.strptime(str(v.Times[vconf.clip[vconf.tname][0]]), '%Y-%m-%d %H:%M:%S')
+            self.data['v']['header']['refTime'] = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:06.3f}Z'.format(
+                    date.year, date.month, date.day, date.hour, date.minute, date.second
+                    )
+            self.data['v']['data'] = v.data.flatten().tolist()
+            self.data['v']['data'] = [None if i == vconf.nanvalue else i for i in self.data['v']['data']]
+
+        with open('{}.json'.format(self.fstem), 'w') as f:
             f.write('[')
             for var in self.data.iterkeys():
                 s = json.dumps(self.data[var])
