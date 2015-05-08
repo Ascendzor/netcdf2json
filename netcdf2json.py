@@ -284,12 +284,12 @@ class Process():
             dims = [alldims[d] for d in vardims]
 
 
-        self.data = np.squeeze(ds.variables[var][
+        self.data = np.flipud(np.squeeze(ds.variables[var][
                 dims[0][0]:dims[0][1],
                 dims[1][0]:dims[1][1],
                 dims[2][0]:dims[2][1],
                 dims[3][0]:dims[3][1]
-                ])
+                ]))
 
         self.time = ds.variables[self.config.tname][:]
         self.Times = []
@@ -299,6 +299,8 @@ class Process():
                 'seconds since {}'.format(self.config.basedate),
                 calendar=self.config.calendar
                 ))
+
+        ds.close()
 
 
 class WriteJSON():
