@@ -408,7 +408,7 @@ class WriteJSON():
 
         with open('{}.json'.format(self.fstem), 'w') as f:
             f.write('[')
-            for var in self.data.iterkeys():
+            for count, var in enumerate(np.sort(self.data.keys())):
                 s = json.dumps(self.data[var])
                 f.write(s)
                 if count < len(self.data.keys()) - 1: f.write(',')
