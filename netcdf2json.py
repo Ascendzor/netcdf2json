@@ -334,6 +334,14 @@ class WriteJSON():
         else:
             self.vconf = Config()
 
+        if fstem:
+            self.fstem = fstem
+        else:
+            self.fstem = '{}-{}'.format(
+                    os.path.split(os.path.splitext(self.uconf.file)[0])[-1],
+                    os.path.split(os.path.splitext(self.vconf.file)[0])[-1]
+                    )
+
         self.header = {}
         # The y data is complicated because NEMO has twin poles.
         self.header['template'] = {
